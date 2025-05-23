@@ -66,7 +66,7 @@ Route::middleware('guest', 'PreventBackHistory')->group(function(){
 });
 
 
-
+Route::get('/homeFg', [App\Http\Controllers\HomeController::class, 'homeFg'])->name('homeFg');
     // Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
 
