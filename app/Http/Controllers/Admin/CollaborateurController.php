@@ -11,6 +11,9 @@ use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\MyLogNotification;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
+
 
 class CollaborateurController extends Controller
 {
@@ -37,14 +40,14 @@ class CollaborateurController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+   /* public function storeOld(Request $request)
     {
         // Valider les données du formulaire (nom, email, etc.)
         $request->validate([
             'name' => 'required|string|max:255',
             'lastname' => 'string|max:255',
             'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:12|confirmed',
         ]);
 
         DB::beginTransaction();
@@ -128,7 +131,92 @@ class CollaborateurController extends Controller
             ];
         }
         return response()->json($dataResponse);
+    } */
+
+    public function store(Request $request)
+    {
+    try {
+        // Valider les données du formulaire
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'lastname' => 'nullable|string|max:255',
+            'email' => 'required|string|email|unique:users',
+            'password' => 'required|string|min:12|confirmed',
+        ]);
+
+        DB::beginTransaction();
+
+        $user = User::create([
+            'uuid' => Str::uuid(),
+            'name' => $request->name,
+            'lastname' => $request->lastname,
+            'phone' => $request->phone,
+            'avatar' => 'default-logo.jpg',
+            'email' => $request->email,
+            'etat' => 'actif',
+            'type' => "0",
+            'code' => Refgenerate(User::class, 'COL', 'code'),
+            'id_role' => $request->id_role,
+            'password' => bcrypt($request->password),
+        ]);
+
+        // Notification aux utilisateurs
+        $notifiant = auth()->check() ? auth()->user()->name . ' ' . auth()->user()->lastname : 'Système';
+
+        $details_log = [
+            'url' => route('admin.collaborateur.index'),
+            'user' => $notifiant,
+            'date' => now(),
+            'title' => "Enregistrement",
+            'action' => "Création d'un nouveau collaborateur " . $request->lastname,
+        ];
+
+        foreach (User::all() as $u) {
+            $u->notify(new MyLogNotification($details_log));
+        }
+
+        // Envoi de mail
+        $mailData = [
+            'title' => 'Votre compte Softlogis',
+            'body' => 'Votre compte Softlogis a bien été créé. Vous pouvez maintenant vous connecter avec ces identifiants. <br><br>
+                <strong>Nom d\'utilisateur : </strong>' . $request->email . '<br>
+                <strong>Mot de passe : </strong>' . $request->password . '<br>',
+            'btnText' => 'Se connecter',
+            'btnLink' => route('login'),
+        ];
+
+        Mail::to($request->email)->send(new LogisticaMail($mailData, 'Votre compte Softlogis'));
+
+        DB::commit();
+
+        return response()->json([
+            'type' => 'success',
+            'urlback' => 'back',
+            'message' => 'Enregistré avec succès!',
+            'code' => 200,
+        ]);
+
+    } catch (ValidationException $e) {
+        return response()->json([
+            'type' => 'error',
+            'message' => 'Erreur de validation : Vérifiez please Votre mail oubien les mot de passes',
+            'errors' => $e->errors(),
+            'code' => 422,
+        ], 422);
+
+    } catch (\Throwable $th) {
+        DB::rollBack();
+
+        // Optionnel : loguer pour le débogage
+        Log::error('Erreur lors de la création du collaborateur', ['exception' => $th]);
+
+        return response()->json([
+            'type' => 'error',
+            'message' => 'Erreur système : ' . $th->getMessage(),
+            'code' => 500,
+        ]);
     }
+}
 
     /**
      * Display the specified resource.

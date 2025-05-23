@@ -191,8 +191,8 @@
                         <h5 class="modal-title">Ajouter collaborateur</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form method="post" action="{{ route('admin.collaborateur.store') }}" class="submitForm"
-                        enctype="multipart/form-data">
+                    <form method="post" id="collaborateurForm" action="{{ route('admin.collaborateur.store') }}"
+                        enctype="multipart/form-data" >
                         @csrf
                         <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
 
@@ -221,11 +221,44 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="form-group">
+                            <!--<div class="form-group">
                                 <label for="password" class="col-form-label">Mot de passe:</label>
                                 <input type="password" class="form-control" id="password" placeholder="********"
                                     name="password">
-                            </div>
+                            </div>-->
+                                <div class="form-group position-relative">
+                                    <label for="password" class="col-form-label">Mot de passe :</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="password" name="password" placeholder="********" oninput="checkPasswordStrength()">
+                                        <span class="input-group-text" onclick="togglePassword('password', this)" style="cursor: pointer;">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </span>
+                                    </div>
+                                    <small id="passwordHelp" class="form-text text-muted">Minimum 12 caractères.</small>
+                                    <div id="password-strength" class="mt-1"></div>
+                                </div>
+                                
+                                <div class="form-group position-relative mt-3">
+                                    <label for="password_confirmation" class="col-form-label">Confirmer le mot de passe :</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" placeholder="********" oninput="checkPasswordMatch()">
+                                        <span class="input-group-text" onclick="togglePassword('password_confirmation', this)" style="cursor: pointer;">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </span>
+                                    </div>
+                                    <div id="password-match-status" class="mt-1"></div>
+                                </div>
+
+
+                                @if ($errors->any())
+                                    <div class="alert alert-danger">
+                                        <ul class="mb-0">
+                                            @foreach ($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
 
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
@@ -239,5 +272,124 @@
     </div>
  <!-- Modal add collaborateur-->
 </div>
+<!-- SweetAlert2 CSS & JS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    function checkPasswordStrength() {
+        const password = document.getElementById("password").value;
+        const strengthDiv = document.getElementById("password-strength");
+
+        let strength = 0;
+        if (password.length >= 12) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[\W]/.test(password)) strength++;
+
+        let strengthText = '';
+        let strengthColor = '';
+
+        if (strength <= 2) {
+            strengthText = 'Faible';
+            strengthColor = 'text-danger';
+        } else if (strength === 3) {
+            strengthText = 'Moyenne';
+            strengthColor = 'text-warning';
+        } else if (strength >= 4) {
+            strengthText = 'Forte';
+            strengthColor = 'text-success';
+        }
+
+        strengthDiv.innerHTML = `<span class="${strengthColor}">Force : ${strengthText}</span>`;
+    }
+
+    function checkPasswordMatch() {
+        const password = document.getElementById("password").value;
+        const confirmation = document.getElementById("password_confirmation").value;
+        const status = document.getElementById("password-match-status");
+
+        if (confirmation === "") {
+            status.innerHTML = "";
+            return;
+        }
+
+        if (password === confirmation) {
+            status.innerHTML = `<span class="text-success">Les mots de passe correspondent.</span>`;
+        } else {
+            status.innerHTML = `<span class="text-danger">Les mots de passe ne correspondent pas.</span>`;
+        }
+    }
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('collaborateurForm');
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        fetch("{{ route('admin.collaborateur.store') }}", {
+            method: "POST",
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.type === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Succès',
+                    text: data.message,
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+
+                // Réinitialiser le formulaire ou fermer le modal
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: data.message,
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Erreur réseau :", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur serveur',
+                text: "Une erreur est survenue, veuillez réessayer.",
+            });
+        });
+    });
+});
+</script>
+
+<script>
+function togglePassword(fieldId, iconElement) {
+    const field = document.getElementById(fieldId);
+    const icon = iconElement.querySelector('i');
+
+    if (field.type === "password") {
+        field.type = "text";
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        field.type = "password";
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
 
 @endsection
