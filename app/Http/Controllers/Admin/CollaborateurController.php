@@ -199,7 +199,7 @@ class CollaborateurController extends Controller
     } catch (ValidationException $e) {
         return response()->json([
             'type' => 'error',
-            'message' => 'Erreur de validation : Vérifiez please Votre mail oubien les mot de passes',
+            'message' => 'Erreur de validation : Vérifiez vos mots de passe, ils doivent contenir au moins 12 caractère',
             'errors' => $e->errors(),
             'code' => 422,
         ], 422);
