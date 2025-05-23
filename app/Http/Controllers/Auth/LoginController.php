@@ -9,6 +9,8 @@ use Illuminate\Http\RedirectResponse;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Carbon\Carbon;
+use App\Models\LoginAttempt;
+use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
@@ -48,7 +50,7 @@ class LoginController extends Controller
      *
      * @return RedirectResponse
      */
-    public function login(Request $request): RedirectResponse
+    /*public function loginold(Request $request): RedirectResponse
     {
         $input = $request->all();
 
@@ -81,6 +83,83 @@ class LoginController extends Controller
         } else {
             return redirect()->back()->with('error', 'Email-Address And Password Are Wrong.');
         }
+    }*/
+    
+    public function login(Request $request): RedirectResponse
+    {
+    $input = $request->all();
+
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
+
+    $ipAddress = $request->ip();
+    $email = $input['email'];
+    
+    $maxAttempts = 3;
+    $lockoutTime = 300; // 5 minutes en secondes
+
+    $key = 'login_attempts_' . $request->ip();
+
+    if (cache()->has($key) && cache()->get($key) >= $maxAttempts) {
+        return redirect()->back()->with('error', 'Trop de tentatives échouées. Veuillez réessayer dans quelques minutes.');
     }
+    // Compter les tentatives échouées des dernières 15 minutes
+    $failedAttemptsCount = LoginAttempt::where('email', $email)
+        ->where('successful', false)
+        ->where('attempted_at', '>=', Carbon::now()->subMinutes(15))
+        ->count();
+
+    // Si plus de 3 tentatives échouées dans les 15 dernières minutes, bloquer la connexion
+    if ($failedAttemptsCount >= 3) {
+        return redirect()->back()->with('error', "Vous avez dépassé 3 tentatives de connexion échouées. Veuillez réessayer dans 15 minutes.");
+    }
+
+    if (auth()->attempt(['email' => $email, 'password' => $input['password']])) {
+        cache()->forget($key); // Reset les tentatives en cas de succès
+        // Enregistrer une tentative réussie
+        LoginAttempt::create([
+            'email' => $email,
+            'ip_address' => $ipAddress,
+            'attempted_at' => now(),
+            'successful' => true,
+        ]);
+
+        $user = auth()->user();
+
+        User::where('uuid', $user->uuid)->update(['last_connection' => Carbon::now()]);
+
+        switch ($user->type) {
+            case User::TYPE_ADMIN:
+                return redirect()->route('admin.home');
+            case User::TYPE_MANAGER:
+                return redirect()->route('manager.home');
+            case User::TYPE_TRANSPORTEUR:
+                return redirect()->route('transporteur.index');
+            default:
+                return redirect()->route('user.home');
+        }
+    } else {
+        // Enregistrer la tentative échouée
+        LoginAttempt::create([
+            'email' => $email,
+            'ip_address' => $ipAddress,
+            'attempted_at' => now(),
+            'successful' => false,
+        ]);
+
+        cache()->increment($key);
+        cache()->put($key, cache()->get($key, 1), now()->addSeconds($lockoutTime));
+
+        $remaining = $maxAttempts - cache()->get($key);
+        $message = $remaining > 0
+            ? "Email ou mot de passe incorrect. Il vous reste $remaining tentative(s)."
+            : "Trop de tentatives échouées. Veuillez réessayer dans 5 minutes.";
+
+        return redirect()->back()->with('error', $message);
+    }
+
+ }
 
 }

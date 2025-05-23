@@ -63,7 +63,12 @@
                                         <p class="mb-0">Veuillez saisir vos identifiants</p>
                                     </div>
                                     <div class="form-body">
-
+									@if (session('error'))
+                                            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                                                <i class="fa fa-exclamation-triangle me-2"></i> {!! session('error') !!}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        @endif
                                         <form class="row g-3" method="POST" action="{{ route('login') }}">
                                             @csrf
 
@@ -128,7 +133,65 @@
 		</div>
 	</div>
 	<!--end wrapper-->
+	<style>
+    @keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
 
+.shake {
+  animation: shake 0.3s ease-in-out;
+  border: 2px solid #dc3545 !important; /* rouge Bootstrap */
+  box-shadow: 0 0 5px #dc3545;
+}
+
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            html: `{!! session('error') !!}`,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#d33',
+        });
+    @endif
+
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Succès',
+            html: `{!! session('success') !!}`,
+            confirmButtonText: 'Super !',
+            confirmButtonColor: '#28a745',
+        });
+    @endif
+</script>
+<script>
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            html: `{!! session('error') !!}`,
+            confirmButtonText: 'Réessayer',
+            confirmButtonColor: '#d33',
+            didClose: () => {
+                const pwdInput = document.getElementById('password');
+                pwdInput.classList.add('shake');
+
+                setTimeout(() => {
+                    pwdInput.classList.remove('shake');
+                }, 500);
+            }
+        });
+    @endif
+</script>
+								
 
 	<!-- Bootstrap JS -->
 	<script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>

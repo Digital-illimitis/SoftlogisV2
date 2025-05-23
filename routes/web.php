@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\OdreExpeditionController;
 use App\Http\Controllers\Admin\FactureProformaController;
 use App\Http\Controllers\Admin\RapportController;
 use App\Http\Controllers\Transporteur\TrController;
+use App\Http\Controllers\Admin\LoginAttemptController;
 
 /*
 |--------------------------------------------------------------------------
@@ -105,6 +106,7 @@ Route::prefix('admin')->name('admin.')->group(function(){
         Route::get('/home', [HomeController::class, 'adminHome'])->name('home');
 
         // import
+        Route::get('/admin/logins', [LoginAttemptController::class, 'index'])->name('admin.logins');
 
 
         Route::get('/import-excel', [ExcelImportController::class, 'index'])->name('import.index');

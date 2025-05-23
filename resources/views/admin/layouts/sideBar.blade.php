@@ -207,7 +207,7 @@
         </li>
       
         @endcan
-        <li class="menu-label text-uppercase">Offres Tarifaires</li>
+        <li class="menu-label text-uppercase" style="color:#0c6dfa;">Offres Tarifaires</li>
         <li>
             <a class="has-arrow" href="javascript:;" id="">
                 <div class="parent-icon"><i class="fadeIn animated bx bx-equalizer fs-6" id="arrowIcon"></i></div>
@@ -243,6 +243,17 @@
                 <div class="parent-icon"><i class="lni lni-consulting fs-6"></i>
                 </div>
                 <div class="menu-title" style="color:black;">Collaborateurs</div>
+            </a>
+        </li>
+        @endcan
+
+        @can('Admin Collaborateur')
+        <li class="menu-label" style="color:#0c6dfa;">Journaux des Tentatives de Connexion</li>
+        <li class="menu-label text-capitalize pt-0 my-0">
+            <a href="{{ route('admin.admin.logins') }}">
+                <div class="parent-icon"><i class="lni lni-consulting fs-6"></i>
+                </div>
+                <div class="menu-title" style="color:black;">Journaux</div>
             </a>
         </li>
         @endcan
